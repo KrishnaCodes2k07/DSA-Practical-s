@@ -37,8 +37,8 @@ Ans: A priority queue is a collection of elements in which each element is assig
     - If two elements have the same priority, they are generally processed in the order in which they were inserted (FIFO).
      Example: In a hospital, emergency patients may be treated before patients with minor problems.
 
-7. What is Deque?
-Ans: The term Deque is a contraction of the name Double-Ended Queue.It is a linear data structure in which elements can be inserted and deleted
+8. What is Deque?.
+Ans:  The term Deque is a contraction of the name Double-Ended Queue.It is a linear data structure in which elements can be inserted and deleted
      from either end, that is, the front or the rear, but not directly from the middle.
      There are two types of deque:
      1. Input-Restricted Deque: Insertion is allowed at only one end, but deletion is allowed at both ends.
