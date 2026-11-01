@@ -1,106 +1,142 @@
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#define UART_BUFFER_SIZE 64 
 
+#define BUFFER_CAPACITY 64
 
+// Structure for storing UART data
 typedef struct {
-uint8_t buffer[UART_BUFFER_SIZE];
-int head;
-int tail;
-int count;
+    uint8_t data[BUFFER_CAPACITY];
+    int writeIndex;
+    int readIndex;
+    int totalBytes;
 } UART_Buffer;
 
-
+// UART device containing transmit and receive buffers
 typedef struct {
-UART_Buffer txBuffer; 
-UART_Buffer rxBuffer; 
+    UART_Buffer transmit;
+    UART_Buffer receive;
 } UART_Device;
 
-
-void UART_Buffer_Init(UART_Buffer *buf) {
-buf->head = 0;
-buf->tail = 0;
-buf->count = 0;
+// Initialize a buffer
+void Buffer_Initialize(UART_Buffer *b)
+{
+    b->writeIndex = 0;
+    b->readIndex = 0;
+    b->totalBytes = 0;
 }
 
-bool UART_Buffer_IsFull(UART_Buffer *buf) {
-return buf->count == UART_BUFFER_SIZE;
-}
-bool UART_Buffer_IsEmpty(UART_Buffer *buf) {
-return buf->count == 0;
-}
-bool UART_Buffer_Enqueue(UART_Buffer *buf, uint8_t data) {
-if (UART_Buffer_IsFull(buf)) return false; 
-buf->buffer[buf->head] = data;
-buf->head = (buf->head + 1) % UART_BUFFER_SIZE;
-buf->count++;
-return true;
-}
-bool UART_Buffer_Dequeue(UART_Buffer *buf, uint8_t *data) {
-if (UART_Buffer_IsEmpty(buf)) return false; 
-*data = buf->buffer[buf->tail];
-buf->tail = (buf->tail + 1) % UART_BUFFER_SIZE;
-buf->count--;
-return true;
+// Check whether buffer is full
+bool Buffer_Full(UART_Buffer *b)
+{
+    return b->totalBytes >= BUFFER_CAPACITY;
 }
 
-
-void UART_Init(UART_Device *uart) {
-UART_Buffer_Init(&uart->txBuffer);
-UART_Buffer_Init(&uart->rxBuffer);
-printf("UART Initialized.\n");
+// Check whether buffer is empty
+bool Buffer_Empty(UART_Buffer *b)
+{
+    return b->totalBytes == 0;
 }
 
+// Insert a byte into the buffer
+bool Buffer_Insert(UART_Buffer *b, uint8_t value)
+{
+    if (Buffer_Full(b))
+        return false;
 
-void UART_SendByte(UART_Device *uart, uint8_t data) {
-if (UART_Buffer_Enqueue(&uart->txBuffer, data))
-printf("TX: '%c' enqueued\n", data);
-else
-printf("TX Buffer Full! Data lost.\n");
+    b->data[b->writeIndex] = value;
+    b->writeIndex = (b->writeIndex + 1) % BUFFER_CAPACITY;
+    b->totalBytes++;
+
+    return true;
 }
 
+// Remove a byte from the buffer
+bool Buffer_Remove(UART_Buffer *b, uint8_t *value)
+{
+    if (Buffer_Empty(b))
+        return false;
 
-void UART_ReceiveByte(UART_Device *uart, uint8_t data) {
-if (UART_Buffer_Enqueue(&uart->rxBuffer, data))
+    *value = b->data[b->readIndex];
+    b->readIndex = (b->readIndex + 1) % BUFFER_CAPACITY;
+    b->totalBytes--;
 
-printf("RX: '%c' received\n", data);
-else
-printf("RX Buffer Full! Data lost.\n");
+    return true;
 }
 
-void UART_ProcessTransmit(UART_Device *uart) {
-uint8_t data;
-while (UART_Buffer_Dequeue(&uart->txBuffer, &data)) {
-printf("Transmitted: '%c'\n", data);
-}
-}
+// Initialize UART device
+void UART_Initialize(UART_Device *device)
+{
+    Buffer_Initialize(&device->transmit);
+    Buffer_Initialize(&device->receive);
 
-
-void UART_ReadReceivedData(UART_Device *uart) {
-uint8_t data;
-while (UART_Buffer_Dequeue(&uart->rxBuffer, &data)) {
-printf("Read from RX: '%c'\n", data);
-}
+    printf("UART Device Initialized Successfully.\n");
 }
 
+// Add data to transmit buffer
+void UART_Transmit(UART_Device *device, uint8_t value)
+{
+    if (Buffer_Insert(&device->transmit, value))
+        printf("Data added to TX: %c\n", value);
+    else
+        printf("Transmit Buffer Overflow!\n");
+}
 
-int main() {
-UART_Device uart;
-UART_Init(&uart);
+// Add incoming data to receive buffer
+void UART_Receive(UART_Device *device, uint8_t value)
+{
+    if (Buffer_Insert(&device->receive, value))
+        printf("Data received in RX: %c\n", value);
+    else
+        printf("Receive Buffer Overflow!\n");
+}
 
-UART_SendByte(&uart, 'H');
-UART_SendByte(&uart, 'E');
-UART_SendByte(&uart, 'L');
-UART_SendByte(&uart, 'L');
-UART_SendByte(&uart, 'O');
+// Process and display transmitted data
+void UART_Transmit_Process(UART_Device *device)
+{
+    uint8_t value;
 
-UART_ProcessTransmit(&uart);
+    while (Buffer_Remove(&device->transmit, &value))
+    {
+        printf("Successfully Transmitted: %c\n", value);
+    }
+}
 
-UART_ReceiveByte(&uart, 'O');
-UART_ReceiveByte(&uart, 'K');
+// Read data from receive buffer
+void UART_Receive_Process(UART_Device *device)
+{
+    uint8_t value;
 
-UART_ReadReceivedData(&uart);
+    while (Buffer_Remove(&device->receive, &value))
+    {
+        printf("Received Data: %c\n", value);
+    }
+}
 
-return 0;
+// Main function
+int main()
+{
+    UART_Device device;
+
+    UART_Initialize(&device);
+
+    printf("\n--- UART TRANSMISSION ---\n");
+
+    UART_Transmit(&device, 'H');
+    UART_Transmit(&device, 'E');
+    UART_Transmit(&device, 'L');
+    UART_Transmit(&device, 'L');
+    UART_Transmit(&device, 'O');
+
+    UART_Transmit_Process(&device);
+
+    printf("\n--- UART RECEPTION ---\n");
+
+    UART_Receive(&device, 'O');
+    UART_Receive(&device, 'K');
+
+    UART_Receive_Process(&device);
+
+    return 0;
 }
